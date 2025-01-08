@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const counting_future_main = @import("counting_future.zig").main;
+const interleaved_counting_main = @import("interleaved_counting.zig").main;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -20,6 +21,7 @@ pub fn main() !void {
 
     const example_map = std.StaticStringMap(*const fn () anyerror!void).initComptime(.{
         .{ "counting_future", &counting_future_main },
+        .{ "interleaved_counting", &interleaved_counting_main },
     });
 
     const example_main = example_map.get(example) orelse return error.InvalidExample;

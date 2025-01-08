@@ -6,3 +6,4 @@ pub const EternalFuture = fut.EternalFuture;
 
 pub const Executor = ex.Executor;
 pub const SingleBlockingExecutor = ex.SingleBlockingExecutor;
+pub const LinearExecutor = ex.LinearExecutor;
