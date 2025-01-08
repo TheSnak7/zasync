@@ -8,10 +8,10 @@ pub const Future = struct {
     pub const State = error{ Pending, Ready };
 
     pub const VTable = struct {
-        poll: *const fn (ctx: *anyopaque) State!void,
+        poll: *const fn (ctx: *anyopaque) anyerror!void,
     };
 
-    pub fn poll(ctx: *Future) State!void {
+    pub fn poll(ctx: *Future) anyerror!void {
         return try ctx.vtable.*.poll(ctx);
     }
 };
