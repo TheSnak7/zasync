@@ -41,4 +41,17 @@ pub fn build(b: *std.Build) void {
         const examples_step = b.step("example", "Run one of the example in the examples folder. (Do not specify the .zig)");
         examples_step.dependOn(&example_run_cmd.step);
     }
+    {
+        const zasync_check = b.addExecutable(.{
+            .name = "zasync_examples",
+            .root_source_file = b.path("examples/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        zasync_check.root_module.addImport("zasync", zasync);
+
+        const check = b.step("check", "Check if foo compiles");
+        check.dependOn(&zasync_check.step);
+    }
 }

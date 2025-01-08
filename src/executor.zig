@@ -1,7 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const fut = @import("future.zig");
-const Future = fut.Future;
+const futures = @import("futures.zig");
+const Future = futures.Future;
 
 pub const Executor = struct {
     ptr: *anyopaque,
@@ -26,15 +26,16 @@ pub const SingleBlockingExecutor = struct {
         return .{};
     }
 
-    pub fn blockOn(_: *SingleBlockingExecutor, future: *Future) void {
+    pub fn blockOn(_: *SingleBlockingExecutor, future: *Future(void)) void {
         while (true) {
-            future.poll() catch |e| switch (e) {
-                Future.Pending => {},
-                Future.Ready => return,
+            if (future.poll()) {
+                return;
+            } else |e| switch (e) {
+                futures.Pending => {},
                 else => {
                     std.log.err("SingleBlockingExecutor future failed: {s}\n", .{@errorName(e)});
                 },
-            };
+            }
         }
     }
 
@@ -52,9 +53,9 @@ pub const SingleBlockingExecutor = struct {
 pub const LinearExecutor = struct {
     alloc: Allocator,
     // Reminder: No lifetimes -> not complex (right now), in the future the Executor should own the futures.
-    tasks: std.ArrayListUnmanaged(*Future),
+    tasks: std.ArrayListUnmanaged(*Future(void)),
 
-    fn zawait(ctx: *anyopaque, future: *Future) void {
+    fn zawait(ctx: *anyopaque, future: *Future(void)) void {
         var self: LinearExecutor = @alignCast(@ptrCast(ctx));
         return self.blockOn(future);
     }
@@ -65,18 +66,19 @@ pub const LinearExecutor = struct {
             for (0..self.tasks.items.len) |i| {
                 var future = self.tasks.items[i];
 
-                future.poll() catch |e| switch (e) {
-                    Future.Ready => {
-                        _ = self.tasks.swapRemove(i);
-                        break;
-                    },
-                    Future.Pending => {
-                        continue;
-                    },
-                    else => {
-                        std.log.err("LinearExecutor future failed: {s}\n", .{@errorName(e)});
-                    },
-                };
+                if (future.poll()) {
+                    _ = self.tasks.swapRemove(i);
+                    break;
+                } else |e| {
+                    switch (e) {
+                        futures.Pending => {
+                            continue;
+                        },
+                        else => {
+                            std.log.err("LinearExecutor future failed: {s}\n", .{@errorName(e)});
+                        },
+                    }
+                }
             }
         }
     }
@@ -88,11 +90,12 @@ pub const LinearExecutor = struct {
         };
     }
 
-    pub fn initWithFutures(alloc: Allocator, futures: []*Future) LinearExecutor {
+    // Passes ownership of futs
+    pub fn initWithFutures(alloc: Allocator, futs: []*Future(void)) LinearExecutor {
         std.debug.assert(futures.len != 0);
         return .{
             .alloc = alloc,
-            .tasks = .empty,
+            .tasks = .fromOwnedSlice(futs),
         };
     }
 
@@ -100,15 +103,15 @@ pub const LinearExecutor = struct {
         self.tasks.deinit(self.alloc);
     }
 
-    pub fn pushFuture(self: *LinearExecutor, future: *Future) !void {
+    pub fn pushFuture(self: *LinearExecutor, future: *Future(void)) !void {
         try self.tasks.append(self.alloc, future);
     }
 
-    pub fn blockOn(_: *LinearExecutor, future: *Future) void {
+    pub fn blockOn(_: *LinearExecutor, future: *Future(void)) void {
         while (true) {
             future.poll() catch |e| switch (e) {
-                Future.Pending => {},
-                Future.Ready => return,
+                futures.Pending => {},
+                futures.Ready => return,
                 else => {
                     std.log.err("LinearExecutor future failed: {s}\n", .{@errorName(e)});
                 },
