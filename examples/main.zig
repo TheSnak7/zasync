@@ -17,14 +17,27 @@ pub fn main() !void {
     }
 
     const example = args[1];
-    std.log.info("Running example: {s}\n", .{example});
 
     const example_map = std.StaticStringMap(*const fn () anyerror!void).initComptime(.{
         .{ "counting_future", &counting_future_main },
         .{ "interleaved_counting", &interleaved_counting_main },
     });
 
+    if (std.mem.eql(u8, example, "all")) {
+        const keys = example_map.keys();
+        const vals = example_map.values();
+
+        for (keys, vals) |k, m| {
+            std.log.info("Running example: {s}", .{k});
+
+            try m();
+        }
+
+        return;
+    }
+
     const example_main = example_map.get(example) orelse return error.InvalidExample;
 
+    std.log.info("Running example: {s}\n", .{example});
     try example_main();
 }
