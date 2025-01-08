@@ -1,4 +1,8 @@
-const future = @import("future.zig");
+const fut = @import("future.zig");
+const ex = @import("executor.zig");
 
-pub const Future = future.Future;
-pub const EternalFuture = future.Future;
+pub const Future = fut.Future;
+pub const EternalFuture = fut.EternalFuture;
+
+pub const Executor = ex.Executor;
+pub const SingleBlockingExecutor = ex.SingleBlockingExecutor;
