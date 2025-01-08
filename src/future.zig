@@ -12,7 +12,7 @@ pub const Future = struct {
     };
 
     pub fn poll(ctx: *Future) anyerror!void {
-        return try ctx.vtable.*.poll(ctx);
+        return try ctx.vtable.*.poll(ctx.ptr);
     }
 };
 
