@@ -32,6 +32,7 @@ pub fn build(b: *std.Build) void {
         zasync_example.root_module.addImport("zasync", zasync);
 
         const example_run_cmd = b.addRunArtifact(zasync_example);
+        b.installArtifact(zasync_example);
         example_run_cmd.step.dependOn(b.getInstallStep());
 
         if (b.args) |args| {

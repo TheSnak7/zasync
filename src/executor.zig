@@ -8,27 +8,70 @@ pub const Executor = struct {
     vtable: *const VTable,
 
     pub const VTable = struct {
-        zawait: *const fn (ctx: *anyopaque) anyerror!void,
+        // Rethink this
+        //zawait: *const fn (ctx: *anyopaque, future: *const Future(void)) anyerror!void,
+        allocator: *const fn (ctx: *const anyopaque) Allocator,
     };
 
+    pub fn allocator(ctx: *const Executor) Allocator {
+        return ctx.vtable.allocator(ctx);
+    }
+
+    pub fn createFuture(ctx: *Executor, FT: type) !*FT {
+        var ex_alloc = ctx.allocator();
+        return try ex_alloc.create(FT);
+    }
+
+    pub fn destroyFuture(ctx: *const Executor, future: anytype) void {
+        const ex_alloc = ctx.allocator();
+
+        const future_info = @typeInfo(@TypeOf(future));
+        std.debug.assert(future_info == .pointer);
+
+        std.debug.print("Destroying future: {*}\n", .{future});
+        ex_alloc.destroy(future);
+        return;
+    }
+
     pub fn zawait(ctx: *Executor) !void {
-        return try ctx.vtable.*.poll(ctx);
+        return try ctx.vtable.poll(ctx);
     }
 };
 
 pub const SingleBlockingExecutor = struct {
-    fn zawait(ctx: *anyopaque, future: *Future) void {
-        var self: SingleBlockingExecutor = @alignCast(@ptrCast(ctx));
+    inner_allocator: Allocator,
+    future: ?*Future(void),
+
+    fn zawait(ctx: *anyopaque, future: *Future(void)) void {
+        var self: *SingleBlockingExecutor = @alignCast(@ptrCast(ctx));
         return self.blockOn(future);
     }
 
-    pub fn init() SingleBlockingExecutor {
-        return .{};
+    fn allocator(ctx: *const anyopaque) Allocator {
+        const self: *const SingleBlockingExecutor = @alignCast(@ptrCast(ctx));
+        return self.inner_allocator;
     }
 
-    pub fn blockOn(_: *SingleBlockingExecutor, future: *Future(void)) void {
+    pub fn init(alloc: Allocator) SingleBlockingExecutor {
+        return .{
+            .inner_allocator = alloc,
+            .future = null,
+        };
+    }
+
+    pub fn deinit(self: *SingleBlockingExecutor) void {
+        _ = self;
+        // if (self.future) |f| {
+        //     self.alloc.destroy(f);
+        // }
+    }
+
+    pub fn blockOn(self: *SingleBlockingExecutor, future: *Future(void)) void {
+        const ex = self.executor();
+
         while (true) {
-            if (future.poll()) {
+            if (future.poll(ex)) {
+                std.debug.print("Future completed\n", .{});
                 return;
             } else |e| switch (e) {
                 futures.Pending => {},
@@ -39,11 +82,22 @@ pub const SingleBlockingExecutor = struct {
         }
     }
 
+    pub fn createFuture(self: *SingleBlockingExecutor, FT: type) !*FT {
+        std.debug.assert(self.future == null);
+        return try self.inner_allocator.create(FT);
+    }
+
+    pub fn destroyFuture(self: *SingleBlockingExecutor, future: anytype) void {
+        std.debug.print("Calling inner alloc\n", .{});
+        return self.inner_allocator.destroy(future);
+    }
+
     pub fn executor(self: *SingleBlockingExecutor) Executor {
         return .{
             .ptr = self,
             .vtable = &.{
-                .zawait = zawait,
+                //.zawait = zawait,
+                .allocator = allocator,
             },
         };
     }
@@ -56,17 +110,24 @@ pub const LinearExecutor = struct {
     tasks: std.ArrayListUnmanaged(*Future(void)),
 
     fn zawait(ctx: *anyopaque, future: *Future(void)) void {
-        var self: LinearExecutor = @alignCast(@ptrCast(ctx));
+        var self: *LinearExecutor = @alignCast(@ptrCast(ctx));
         return self.blockOn(future);
+    }
+
+    fn allocator(ctx: *const anyopaque) Allocator {
+        const self: *const LinearExecutor = @alignCast(@ptrCast(ctx));
+        return self.alloc;
     }
 
     // This is a demo function, normally a part of the implementation
     pub fn run(self: *LinearExecutor) void {
+        const ex = self.executor();
+
         while (self.tasks.items.len != 0) {
             for (0..self.tasks.items.len) |i| {
                 var future = self.tasks.items[i];
 
-                if (future.poll()) {
+                if (future.poll(ex)) {
                     _ = self.tasks.swapRemove(i);
                     break;
                 } else |e| {
@@ -107,11 +168,10 @@ pub const LinearExecutor = struct {
         try self.tasks.append(self.alloc, future);
     }
 
-    pub fn blockOn(_: *LinearExecutor, future: *Future(void)) void {
+    pub fn blockOn(self: *LinearExecutor, future: *Future(void)) void {
         while (true) {
-            future.poll() catch |e| switch (e) {
+            future.poll(self.executor()) catch |e| switch (e) {
                 futures.Pending => {},
-                futures.Ready => return,
                 else => {
                     std.log.err("LinearExecutor future failed: {s}\n", .{@errorName(e)});
                 },
@@ -123,7 +183,8 @@ pub const LinearExecutor = struct {
         return .{
             .ptr = self,
             .vtable = &.{
-                .zawait = zawait,
+                //.zawait = zawait,
+                .allocator = allocator,
             },
         };
     }

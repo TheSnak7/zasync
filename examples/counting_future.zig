@@ -9,9 +9,17 @@ const SingleBlockingExecutor = zasync.SingleBlockingExecutor;
 const CountingFuture = struct {
     counter: u32,
     max: u32,
+    // Simple future does not need a state machine
+    done: bool,
 
-    fn poll(ctx: *anyopaque) FutureState!void {
+    fn poll(ctx: *anyopaque, _: Executor) FutureState!void {
         var self: *CountingFuture = @alignCast(@ptrCast(ctx));
+
+        defer {
+            if (self.done) {
+                std.debug.print("Finished future\n", .{});
+            }
+        }
 
         if (self.counter < self.max) {
             self.counter += 1;
@@ -19,6 +27,7 @@ const CountingFuture = struct {
             return FutureState.Pending;
         } else {
             std.debug.print("Returned ready: {}/{}\n", .{ self.counter, self.max });
+            self.done = true;
             return;
         }
     }
@@ -31,6 +40,7 @@ const CountingFuture = struct {
         return .{
             .counter = 0,
             .max = max,
+            .done = false,
         };
     }
 
@@ -46,10 +56,19 @@ const CountingFuture = struct {
 };
 
 pub fn main() !void {
-    var counting_future = CountingFuture.init(10);
-    var fut = counting_future.future();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
 
-    var sbe = SingleBlockingExecutor.init();
+    const gpa_alloc = gpa.allocator();
+
+    var sbe = SingleBlockingExecutor.init(gpa_alloc);
+    defer sbe.deinit();
+
+    var counting_future = try sbe.createFuture(CountingFuture);
+    defer sbe.destroyFuture(counting_future);
+
+    counting_future.* = CountingFuture.init(10);
+    var fut = counting_future.future();
 
     sbe.blockOn(&fut);
 }

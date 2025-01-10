@@ -1,3 +1,6 @@
+const extr = @import("executor.zig");
+const Executor = extr.Executor;
+
 pub const State = error{Pending};
 
 pub const Pending = error.Pending;
@@ -11,12 +14,12 @@ pub fn Future(output: type) type {
         vtable: *const VTable,
 
         pub const VTable = struct {
-            poll: *const fn (ctx: *anyopaque) anyerror!Output,
+            poll: *const fn (ctx: *anyopaque, ex: Executor) anyerror!Output,
             cancel: *const fn (ctx: *anyopaque) void,
         };
 
-        pub fn poll(ctx: *Self) anyerror!Output {
-            return try ctx.vtable.poll(ctx.ptr);
+        pub fn poll(ctx: *Self, ex: Executor) anyerror!Output {
+            return try ctx.vtable.poll(ctx.ptr, ex);
         }
 
         // Cancellation cannot fail
