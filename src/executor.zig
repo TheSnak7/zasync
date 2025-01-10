@@ -28,13 +28,24 @@ pub const Executor = struct {
         const future_info = @typeInfo(@TypeOf(future));
         std.debug.assert(future_info == .pointer);
 
-        std.debug.print("Destroying future: {*}\n", .{future});
         ex_alloc.destroy(future);
         return;
     }
 
     pub fn zawait(ctx: *Executor) !void {
         return try ctx.vtable.poll(ctx);
+    }
+};
+
+pub const NullExecutor = struct {
+    pub fn executor() Executor {
+        return .{
+            .ptr = undefined,
+            .vtable = &.{
+                //.zawait = zawait,
+                .allocator = undefined,
+            },
+        };
     }
 };
 
@@ -71,7 +82,6 @@ pub const SingleBlockingExecutor = struct {
 
         while (true) {
             if (future.poll(ex)) {
-                std.debug.print("Future completed\n", .{});
                 return;
             } else |e| switch (e) {
                 futures.Pending => {},
@@ -88,7 +98,6 @@ pub const SingleBlockingExecutor = struct {
     }
 
     pub fn destroyFuture(self: *SingleBlockingExecutor, future: anytype) void {
-        std.debug.print("Calling inner alloc\n", .{});
         return self.inner_allocator.destroy(future);
     }
 
