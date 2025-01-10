@@ -30,8 +30,8 @@ pub fn Future(output: type) type {
 }
 
 pub const EternalFuture = struct {
-    fn poll(_: *anyopaque) State!void {
-        return Future.Pending;
+    fn poll(_: *anyopaque, _: Executor) State!void {
+        return Pending;
     }
 
     fn cancel(_: *anyopaque) void {
