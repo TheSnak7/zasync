@@ -1,8 +1,10 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const zasync = @import("zasync");
+const futures = zasync.futures;
 const Future = zasync.Future;
-const FutureState = zasync.FutureState;
-const EternalFuture = zasync.EternalFuture;
+const FutureState = futures.State;
+const EternalFuture = futures.EternalFuture;
 const Executor = zasync.Executor;
 const SingleBlockingExecutor = zasync.SingleBlockingExecutor;
 const NullExecutor = zasync.NullExecutor;
@@ -42,6 +44,13 @@ const CountingFuture = struct {
         return;
     }
 
+    fn deinit(ctx: *anyopaque, alloc: ?*Allocator) void {
+        if (alloc) |a| {
+            const self: *CountingFuture = @alignCast(@ptrCast(ctx));
+            return a.destroy(self);
+        }
+    }
+
     pub fn init(max: u32) CountingFuture {
         return .{
             .counter = 0,
@@ -55,7 +64,9 @@ const CountingFuture = struct {
             .vtable = &.{
                 .poll = poll,
                 .cancel = cancel,
+                .deinit = deinit,
             },
+            .is_owner = futures.Owner,
         };
     }
 };
@@ -69,8 +80,9 @@ test "CountingFuture" {
     var sbe = SingleBlockingExecutor.init(gpa_alloc);
     defer sbe.deinit();
 
-    var counting_future = try sbe.createFuture(CountingFuture);
-    defer sbe.destroyFuture(counting_future);
+    var ex = sbe.executor();
+
+    var counting_future = try ex.createFuture(CountingFuture);
 
     counting_future.* = CountingFuture.init(10);
     var fut = counting_future.future();
@@ -84,4 +96,8 @@ test "Interleaved counting Example" {
 
 test "Counting future Example" {
     try examples.counting_future_main();
+}
+
+test "Void Wrap Callback future Example" {
+    try examples.void_wrap_callback_main();
 }

@@ -1,16 +1,14 @@
 const fut = @import("futures.zig");
 const ex = @import("executor.zig");
 const vc = @import("futures/void_callback.zig");
+const EternalFutureI = @import("futures/EternalFuture.zig");
 
 pub const Future = fut.Future;
-pub const FutureState = fut.State;
-pub const EternalFuture = fut.EternalFuture;
-pub const FutureOwner = fut.Owner;
 
 pub const futures = struct {
     pub const State = fut.State;
-    pub const EternalFuture = fut.EternalFuture;
     pub const Owner = fut.Owner;
+    pub const EternalFuture = EternalFutureI;
 
     pub const voidCallback = vc.voidCallback;
 };

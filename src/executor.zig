@@ -47,6 +47,7 @@ pub const NullExecutor = struct {
                 //.zawait = zawait,
                 //.allocator = undefined,
             },
+            .allocator = undefined,
         };
     }
 };

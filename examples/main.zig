@@ -2,7 +2,7 @@ const std = @import("std");
 
 pub const counting_future_main = @import("counting_future.zig").main;
 pub const interleaved_counting_main = @import("interleaved_counting.zig").main;
-const void_wrap_callback_main = @import("void_wrap_callback.zig").main;
+pub const void_wrap_callback_main = @import("void_wrap_callback.zig").main;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
