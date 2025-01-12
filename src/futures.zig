@@ -1,4 +1,5 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const builtin = @import("builtin");
 
 const extr = @import("executor.zig");
@@ -23,6 +24,7 @@ pub fn Future(output: type) type {
         pub const VTable = struct {
             poll: *const fn (ctx: *anyopaque, ex: *Executor) anyerror!Output,
             cancel: *const fn (ctx: *anyopaque) void,
+            deinit: *const fn (ctx: *anyopaque, alloc: ?*Allocator) void,
         };
 
         pub fn poll(ctx: *Self, ex: *Executor) anyerror!Output {
@@ -31,13 +33,17 @@ pub fn Future(output: type) type {
             return try ctx.vtable.poll(ctx.ptr, ex);
         }
 
+        pub fn deinit(ctx: *Self, alloc: *Allocator) void {
+            return ctx.vtable.deinit(ctx.ptr, alloc);
+        }
+
         pub fn setOwnerStatus(future: *Self, status: bool) void {
             if (builtin.mode == .Debug) {
-                future.is_owner == status;
+                future.is_owner = status;
             }
         }
 
-        pub fn assertIsOwner(ctx: *Self) void {
+        pub fn assertIsOwner(ctx: *const Self) void {
             if (builtin.mode == .Debug) {
                 std.debug.assert(ctx.is_owner);
             }

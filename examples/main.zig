@@ -2,6 +2,7 @@ const std = @import("std");
 
 pub const counting_future_main = @import("counting_future.zig").main;
 pub const interleaved_counting_main = @import("interleaved_counting.zig").main;
+const void_wrap_callback_main = @import("void_wrap_callback.zig").main;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -21,6 +22,7 @@ pub fn main() !void {
     const example_map = std.StaticStringMap(*const fn () anyerror!void).initComptime(.{
         .{ "counting_future", &counting_future_main },
         .{ "interleaved_counting", &interleaved_counting_main },
+        .{ "void_wrap_callback", &void_wrap_callback_main },
     });
 
     if (std.mem.eql(u8, example, "all")) {

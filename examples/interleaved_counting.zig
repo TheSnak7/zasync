@@ -1,4 +1,5 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const zasync = @import("zasync");
 const Future = zasync.Future;
 const FutureState = zasync.FutureState;
@@ -28,6 +29,13 @@ const CountingFuture = struct {
         return;
     }
 
+    fn deinit(ctx: *anyopaque, alloc: ?*Allocator) void {
+        if (alloc) |a| {
+            const self: *CountingFuture = @alignCast(@ptrCast(ctx));
+            return a.destroy(self);
+        }
+    }
+
     pub fn init(start: u32, end: u32) CountingFuture {
         return .{
             .counter = start,
@@ -41,6 +49,7 @@ const CountingFuture = struct {
             .vtable = &.{
                 .poll = poll,
                 .cancel = cancel,
+                .deinit = deinit,
             },
             .is_owner = FutureOwner,
         };

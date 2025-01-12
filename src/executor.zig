@@ -8,32 +8,29 @@ const Future = futures.Future;
 pub const Executor = struct {
     ptr: *anyopaque,
     vtable: *const VTable,
+    // Pointer to the allocator stored in the Full Executor
+    allocator: *Allocator,
 
     pub const VTable = struct {
         // Rethink this
         //zawait: *const fn (ctx: *anyopaque, future: *const Future(void)) anyerror!void,
-        allocator: *const fn (ctx: *const anyopaque) Allocator,
+        //allocator: *const fn (ctx: *const anyopaque) Allocator,
     };
 
-    pub fn allocator(ctx: *const Executor) Allocator {
-        return ctx.vtable.allocator(ctx);
-    }
-
     pub fn createFuture(ctx: *Executor, FT: type) !*FT {
-        var ex_alloc = ctx.allocator();
-        return try ex_alloc.create(FT);
+        return try ctx.allocator.create(FT);
     }
 
-    pub fn destroyFuture(ctx: *const Executor, future: anytype) void {
+    pub fn destroyFuture(ctx: *Executor, future: anytype) void {
+        const self: *Executor = @alignCast(@ptrCast(ctx));
+
         verify.assertPointerToFuture(@TypeOf(future));
         future.assertIsOwner();
-
-        const ex_alloc = ctx.allocator();
 
         const future_info = @typeInfo(@TypeOf(future));
         std.debug.assert(future_info == .pointer);
 
-        ex_alloc.destroy(future);
+        future.vtable.deinit(future.ptr, self.allocator);
         return;
     }
 
@@ -48,7 +45,7 @@ pub const NullExecutor = struct {
             .ptr = undefined,
             .vtable = &.{
                 //.zawait = zawait,
-                .allocator = undefined,
+                //.allocator = undefined,
             },
         };
     }
@@ -88,6 +85,7 @@ pub const SingleBlockingExecutor = struct {
 
         while (true) {
             if (future.poll(&ex)) {
+                ex.destroyFuture(future);
                 return;
             } else |e| switch (e) {
                 futures.Pending => {},
@@ -98,22 +96,25 @@ pub const SingleBlockingExecutor = struct {
         }
     }
 
-    pub fn createFuture(self: *SingleBlockingExecutor, FT: type) !*FT {
-        std.debug.assert(self.future == null);
-        return try self.inner_allocator.create(FT);
-    }
+    // pub fn createFuture(self: *SingleBlockingExecutor, FT: type) !*FT {
+    //     std.debug.assert(self.future == null);
+    //     std.debug.print("Alloc:  {}\n", .{self.inner_allocator});
+    //     return try self.inner_allocator.create(FT);
+    // }
 
-    pub fn destroyFuture(self: *SingleBlockingExecutor, future: anytype) void {
-        return self.inner_allocator.destroy(future);
-    }
+    // pub fn destroyFuture(self: *SingleBlockingExecutor, future: anytype) void {
+    //     verify.assertPointerToFuture(@TypeOf(future));
+    //     return future.deinit(&self.inner_allocator);
+    // }
 
     pub fn executor(self: *SingleBlockingExecutor) Executor {
         return .{
             .ptr = self,
             .vtable = &.{
                 //.zawait = zawait,
-                .allocator = allocator,
+                //.allocator = allocator,
             },
+            .allocator = &self.inner_allocator,
         };
     }
 };
@@ -199,8 +200,9 @@ pub const LinearExecutor = struct {
             .ptr = self,
             .vtable = &.{
                 //.zawait = zawait,
-                .allocator = allocator,
+                //.allocator = allocator,
             },
+            .allocator = &self.alloc,
         };
     }
 };
