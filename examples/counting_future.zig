@@ -2,6 +2,7 @@ const std = @import("std");
 const zasync = @import("zasync");
 const Future = zasync.Future;
 const FutureState = zasync.FutureState;
+const FutureOwner = zasync.FutureOwner;
 const EternalFuture = zasync.EternalFuture;
 const Executor = zasync.Executor;
 const SingleBlockingExecutor = zasync.SingleBlockingExecutor;
@@ -51,6 +52,7 @@ const CountingFuture = struct {
                 .poll = poll,
                 .cancel = cancel,
             },
+            .is_owner = FutureOwner,
         };
     }
 };

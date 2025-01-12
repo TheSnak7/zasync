@@ -1,6 +1,8 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const futures = @import("futures.zig");
+const verify = @import("verify.zig");
 const Future = futures.Future;
 
 pub const Executor = struct {
@@ -23,6 +25,9 @@ pub const Executor = struct {
     }
 
     pub fn destroyFuture(ctx: *const Executor, future: anytype) void {
+        verify.assertPointerToFuture(@TypeOf(future));
+        future.assertIsOwner();
+
         const ex_alloc = ctx.allocator();
 
         const future_info = @typeInfo(@TypeOf(future));
@@ -51,7 +56,7 @@ pub const NullExecutor = struct {
 
 pub const SingleBlockingExecutor = struct {
     inner_allocator: Allocator,
-    future: ?*Future(void),
+    future: ?Future(void),
 
     fn zawait(ctx: *anyopaque, future: *Future(void)) void {
         var self: *SingleBlockingExecutor = @alignCast(@ptrCast(ctx));
@@ -79,6 +84,7 @@ pub const SingleBlockingExecutor = struct {
 
     pub fn blockOn(self: *SingleBlockingExecutor, future: *Future(void)) void {
         var ex = self.executor();
+        self.future = future.*;
 
         while (true) {
             if (future.poll(&ex)) {
