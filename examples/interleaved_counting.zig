@@ -15,10 +15,10 @@ const CountingFuture = struct {
 
         if (self.counter < self.max) {
             self.counter += 1;
-            std.debug.print("Incremented counter: {}/{}\n", .{ self.counter, self.max });
+            std.log.info("Incremented counter: {}/{}", .{ self.counter, self.max });
             return FutureState.Pending;
         } else {
-            std.debug.print("Returned ready: {}/{}\n", .{ self.counter, self.max });
+            std.log.info("Returned ready: {}/{}", .{ self.counter, self.max });
             return;
         }
     }

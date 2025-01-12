@@ -12,21 +12,21 @@ const CountingFuture = struct {
     // Simple future does not need a state machine
     done: bool,
 
-    fn poll(ctx: *anyopaque, _: Executor) FutureState!void {
+    fn poll(ctx: *anyopaque, _: *Executor) FutureState!void {
         var self: *CountingFuture = @alignCast(@ptrCast(ctx));
 
         defer {
             if (self.done) {
-                std.debug.print("Finished future\n", .{});
+                std.log.info("Finished future", .{});
             }
         }
 
         if (self.counter < self.max) {
             self.counter += 1;
-            std.debug.print("Incremented counter: {}/{}\n", .{ self.counter, self.max });
+            std.log.info("Incremented counter: {}/{}", .{ self.counter, self.max });
             return FutureState.Pending;
         } else {
-            std.debug.print("Returned ready: {}/{}\n", .{ self.counter, self.max });
+            std.log.info("Returned ready: {}/{}", .{ self.counter, self.max });
             self.done = true;
             return;
         }

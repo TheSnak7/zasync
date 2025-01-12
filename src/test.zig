@@ -78,6 +78,10 @@ test "CountingFuture" {
     sbe.blockOn(&fut);
 }
 
-test "Interleaved counting" {
+test "Interleaved counting Example" {
     try examples.interleaved_counting_main();
+}
+
+test "Counting future Example" {
+    try examples.counting_future_main();
 }
