@@ -6,7 +6,7 @@ const EternalFuture = zasync.EternalFuture;
 const Executor = zasync.Executor;
 const SingleBlockingExecutor = zasync.SingleBlockingExecutor;
 const NullExecutor = zasync.NullExecutor;
-
+const examples = @import("zasync_examples");
 test "EternalFuture" {
     var eternal = EternalFuture.init();
     var fut = eternal.future();
@@ -76,4 +76,8 @@ test "CountingFuture" {
     var fut = counting_future.future();
 
     sbe.blockOn(&fut);
+}
+
+test "Interleaved counting" {
+    try examples.interleaved_counting_main();
 }

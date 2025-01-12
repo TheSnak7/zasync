@@ -130,13 +130,13 @@ pub const LinearExecutor = struct {
 
     // This is a demo function, normally a part of the implementation
     pub fn run(self: *LinearExecutor) void {
-        const ex = self.executor();
+        var ex = self.executor();
 
         while (self.tasks.items.len != 0) {
             for (0..self.tasks.items.len) |i| {
                 var future = self.tasks.items[i];
 
-                if (future.poll(ex)) {
+                if (future.poll(&ex)) {
                     _ = self.tasks.swapRemove(i);
                     break;
                 } else |e| {

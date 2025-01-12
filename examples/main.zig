@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const counting_future_main = @import("counting_future.zig").main;
-const interleaved_counting_main = @import("interleaved_counting.zig").main;
+pub const counting_future_main = @import("counting_future.zig").main;
+pub const interleaved_counting_main = @import("interleaved_counting.zig").main;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

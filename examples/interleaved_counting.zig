@@ -10,7 +10,7 @@ const CountingFuture = struct {
     counter: u32,
     max: u32,
 
-    fn poll(ctx: *anyopaque, _: Executor) FutureState!void {
+    fn poll(ctx: *anyopaque, _: *Executor) FutureState!void {
         var self: *CountingFuture = @alignCast(@ptrCast(ctx));
 
         if (self.counter < self.max) {
