@@ -78,10 +78,10 @@ pub const SingleBlockingExecutor = struct {
     }
 
     pub fn blockOn(self: *SingleBlockingExecutor, future: *Future(void)) void {
-        const ex = self.executor();
+        var ex = self.executor();
 
         while (true) {
-            if (future.poll(ex)) {
+            if (future.poll(&ex)) {
                 return;
             } else |e| switch (e) {
                 futures.Pending => {},

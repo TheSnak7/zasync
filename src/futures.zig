@@ -14,11 +14,11 @@ pub fn Future(output: type) type {
         vtable: *const VTable,
 
         pub const VTable = struct {
-            poll: *const fn (ctx: *anyopaque, ex: Executor) anyerror!Output,
+            poll: *const fn (ctx: *anyopaque, ex: *Executor) anyerror!Output,
             cancel: *const fn (ctx: *anyopaque) void,
         };
 
-        pub fn poll(ctx: *Self, ex: Executor) anyerror!Output {
+        pub fn poll(ctx: *Self, ex: *Executor) anyerror!Output {
             return try ctx.vtable.poll(ctx.ptr, ex);
         }
 
@@ -30,7 +30,7 @@ pub fn Future(output: type) type {
 }
 
 pub const EternalFuture = struct {
-    fn poll(_: *anyopaque, _: Executor) State!void {
+    fn poll(_: *anyopaque, _: *Executor) State!void {
         return Pending;
     }
 
